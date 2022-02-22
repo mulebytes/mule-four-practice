@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<flow name="scopes_for-each_parallel-for-each_cacheFlow" doc:id="37a5ba93-be4c-4a95-acec-7e7c35cef473" >
+		<http:listener doc:name="Listener" doc:id="a7dc34b0-9a04-4b75-8e2d-d893659fd311" config-ref="HTTP_Listener_config" path="/test"/>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="c203a0ca-e1cb-4bf8-8b94-826a1eb6aaf9" />
+		<set-variable value="#[[]]" doc:name="Initialize transformedPayload" doc:id="81a80f09-6683-4164-9753-85d212c21f29" variableName="transformedPayload"/>
+		<foreach doc:name="For Each" doc:id="d72465d1-b278-4d36-91d3-b180291be2db" collection="#[payload]">
+			<set-variable value="#[payload.Gender]" doc:name="Set gender" doc:id="88d434d0-8c15-4acd-bd1c-43f4355a7790" variableName="gender"/>
+			<ee:transform doc:name="Set transformedPayload" doc:id="10c827de-6511-4dd9-9f5f-4b3ad24a2309" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="transformedPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.transformedPayload + {
+	ID: payload.ID,
+	Name: payload.Name,
+	Gender: payload.Gender
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<ee:transform doc:name="Set Payload" doc:id="2b9982b2-3708-4e2b-ac24-fb3e37bb76e8">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+payload.^raw]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<choice doc:name="Choice" doc:id="32afa871-ed0b-4948-b66b-cfc1c8e559b3" >
+				<when expression="#[vars.gender == 0 or vars.gender == '0']">
+					<file:write doc:name="Write" doc:id="be9f4611-6deb-4569-8d6d-096734b652c0" path='#["C:\\OutputFiles\\Student_$(vars.counter)_Female.txt"]' />
+				</when>
+				<when expression="#[vars.gender == 1 or vars.gender == '1']">
+					<file:write doc:name="Write" doc:id="57ee67e9-6c52-4e71-8791-83129464e2e9" path='#["C:\\OutputFiles\\Student_$(vars.counter)_Male.txt"]' />
+				</when>
+				<otherwise >
+					<raise-error doc:name="Raise error" doc:id="d1db5c33-1591-4166-95a0-ba504cb87f31" type="APP:ERROR" description="Invalid Gender"/>
+				</otherwise>
+			</choice>
+		</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="4a6a94f4-d462-4b3e-acae-f31fd1bf6177" />
+	</flow>
+</mule>

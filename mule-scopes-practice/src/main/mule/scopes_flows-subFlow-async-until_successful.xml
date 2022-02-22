@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:cloudhub="http://www.mulesoft.org/schema/mule/cloudhub" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/cloudhub http://www.mulesoft.org/schema/mule/cloudhub/current/mule-cloudhub.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="401aa57d-49f9-4082-af80-d972a533ce96" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="cloudhub-notificationFlow" doc:id="2d6b0ff1-0fcf-41f5-adbc-fc701c63340e" >
+		<http:listener doc:name="Listener" doc:id="3a7d0553-ab29-4381-9506-1ad1dca013df" config-ref="HTTP_Listener_config" path="/studentInfo"/>
+		<flow-ref doc:name="printLogSub_Flow" doc:id="e4c947f9-e311-454e-9082-c6ca7f737ac5" name="printLogSub_Flow"/>
+		<set-payload doc:name="Set Payload" doc:id="ded345f5-3896-41ff-872a-be304d165fc8" value="#[output application/xml --- payload]"/>
+		<set-variable value="#[payload]" doc:name="Set initPayload" doc:id="1139253a-0361-4216-b0d3-d8e2c0c81515" variableName="initPayload"/>
+		<set-variable value="#[output application/json --- payload.studentName]" doc:name="Set studentName" doc:id="d5687e69-e9d0-4f59-8c8e-a4f3af754487" variableName="studentName"/>
+		<async doc:name="Async" doc:id="9593b2c9-a381-48d6-b852-caeb7822414c" maxConcurrency="16">
+			<until-successful maxRetries="3" doc:name="Until Successful" doc:id="2c1d641d-6c5c-4941-a6c1-b973d88b4d3f" >
+				<flow-ref doc:name="printLogFlow" doc:id="9fa7b4a8-0e9e-4f7e-83e8-3ae5c7cb587e" name="printLogFlow" target="subFlowPayload" />
+			</until-successful>
+		</async>
+		<set-variable value="HiThere" doc:name="Set studentName" doc:id="f26285e6-f402-4b24-b696-7fae4ec7483a" variableName="studentName"/>
+		<set-payload value="#[output application/json --- vars.studentName]" doc:name="Set Payload" doc:id="6e4cd38d-cd98-4614-8eb1-846fecc75575" />
+		<logger level="INFO" doc:name="Logger" doc:id="d9f1f0e0-5aab-482f-9c84-ee6ac524975f" />
+		<set-variable value="#[output application/json --- vars.initPayload.student.studentName]" doc:name="Set studentName" doc:id="36f9f1b8-df85-4274-89ca-75f1d325c876" variableName="studentName"/>
+		<logger level="INFO" doc:name="Logger" doc:id="7b5b176b-784a-4d83-b454-4d5559255bc4" />
+	</flow>
+	<sub-flow name="printLogSub_Flow" doc:id="9d063147-22b2-4cc9-b8c5-841f2c558da6" >
+		<try doc:name="Try" doc:id="3739ac88-1f00-4aaa-b828-b07bd956160c">
+			<logger level="INFO" doc:name="Logger" doc:id="04db1d3e-8092-411d-b9b6-0865e18945fc" message="#[vars.logMessage]" />
+			<set-payload value='#[output application/json --- {&#10;	message: "Hello World"&#10;}]' doc:name="Set Payload" doc:id="aed16285-585c-40d7-b35f-0fe5eba92ef8" />
+			<raise-error doc:name="Raise error" doc:id="7ce38da8-1392-42b0-82d0-6bf7412478d6" type="APP:ERROR" description="Error Occurred In Sub Flow" />
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="686a79fd-40c4-40dd-aac9-85b53fab39c8" type="ANY">
+					<logger level="INFO" doc:name="Logger" doc:id="89cc8169-d58c-43b4-a9f3-4f67c91ced23" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<flow name="printLogFlow" doc:id="6fbd5a53-f537-4d2d-bae5-66d9b03cb829" >
+		<logger level="INFO" doc:name="Logger" doc:id="620cbd44-fbc4-4a99-8d00-ea1ff72ab695" message="#[vars.logMessage]" />
+		<set-payload value='#[output application/json --- {&#10;	message: "Hello World"&#10;}]' doc:name="Set Payload" doc:id="e3d05b1e-fb70-492c-a91b-23496462d65e" />
+		<raise-error doc:name="Raise error" doc:id="e0be3272-119c-48a4-974f-6228add9c391" type="APP:ERROR" description="Error Occcurred"/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="dbd1a33f-beda-4650-9330-d7ae304f4995" >
+				<logger level="INFO" doc:name="Logger" doc:id="2b429e5a-7278-4fd7-af19-49d41b4f6bd2" />
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>
