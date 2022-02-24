@@ -7,7 +7,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
-	<flow name="scopes_for-each_parallel-for-each_cacheFlow" doc:id="37a5ba93-be4c-4a95-acec-7e7c35cef473" >
+	<flow name="for-each-Flow" doc:id="37a5ba93-be4c-4a95-acec-7e7c35cef473" >
 		<http:listener doc:name="Listener" doc:id="a7dc34b0-9a04-4b75-8e2d-d893659fd311" config-ref="HTTP_Listener_config" path="/test"/>
 		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="c203a0ca-e1cb-4bf8-8b94-826a1eb6aaf9" />
 		<set-variable value="#[[]]" doc:name="Initialize transformedPayload" doc:id="81a80f09-6683-4164-9753-85d212c21f29" variableName="transformedPayload"/>
@@ -42,11 +42,70 @@ payload.^raw]]></ee:set-payload>
 				<when expression="#[vars.gender == 1 or vars.gender == '1']">
 					<file:write doc:name="Write" doc:id="57ee67e9-6c52-4e71-8791-83129464e2e9" path='#["C:\\OutputFiles\\Student_$(vars.counter)_Male.txt"]' />
 				</when>
-				<otherwise >
-					<raise-error doc:name="Raise error" doc:id="d1db5c33-1591-4166-95a0-ba504cb87f31" type="APP:ERROR" description="Invalid Gender"/>
-				</otherwise>
 			</choice>
+			
 		</foreach>
-		<logger level="INFO" doc:name="Logger" doc:id="4a6a94f4-d462-4b3e-acae-f31fd1bf6177" />
+		<logger level="INFO" doc:name="Logger" doc:id="4a6a94f4-d462-4b3e-acae-f31fd1bf6177" message="#[vars]"/>
+	</flow>
+	<flow name="parallel-for-each-Flow" doc:id="b85a7bb4-ceb0-442e-8273-d0a86137938f" >
+	<http:listener doc:name="Listener" doc:id="a8120a8e-0ae0-463b-91f6-7a76e3575c02" config-ref="HTTP_Listener_config" path="/testParallel">
+			<http:error-response >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="8801762f-607a-4004-9b2b-ca248a1ef038" />
+		<set-variable value="#[[]]" doc:name="Initialize transformedPayload" doc:id="f80984ad-3d54-4a8d-89a5-62f471a97bf1" variableName="transformedPayload"/>
+	
+		<parallel-foreach doc:name="Parallel For Each" doc:id="f7af8c1d-f53a-48c1-b492-2671326cc994" >
+			<set-variable value="#[payload.Gender]" doc:name="Set gender" doc:id="bb5b083b-c8b4-4103-b751-c7307a353124" variableName="gender" />
+			<set-variable value="#[(vars.counter default 0) + 1]" doc:name="Set counter" doc:id="aed0b3c8-5176-4e4a-b76c-e26474e9131a" variableName="counter"/>
+			<ee:transform doc:name="Set transformedPayload" doc:id="0835dfef-d9f3-4e06-ad8c-c96392dce18f">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="transformedPayload"><![CDATA[%dw 2.0
+output application/json
+---
+vars.transformedPayload + {
+	ID: payload.ID,
+	Name: payload.Name,
+	Gender: payload.Gender
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<ee:transform doc:name="Set Payload" doc:id="f005d686-7936-4a60-a190-ef05f47cc7fb">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+payload.^raw]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<choice doc:name="Choice" doc:id="6da63f32-3a80-464c-991c-1d7b2c8fdc91">
+				<when expression="#[vars.gender == 0 or vars.gender == '0']">
+					<file:write doc:name="Write" doc:id="2083bad1-df96-4acd-96a1-9558a55b2db4" path='#["C:\\OutputFiles\\Student_$(vars.counter)_Female.txt"]' />
+				</when>
+				<when expression="#[vars.gender == 1 or vars.gender == '1']">
+					<file:write doc:name="Write" doc:id="c49fef78-59a9-440e-a54d-22504395a4aa" path='#["C:\\OutputFiles\\Student_$(vars.counter)_Male.txt"]' />
+				</when>
+				<otherwise>
+					<raise-error doc:name="Raise APP:ERROR" doc:id="b534bd9d-15ce-4fc0-bd26-4f8e4ab80212" type="APP:ERROR" description="Error Occured While Writing File" />
+
+				</otherwise>
+			
+</choice>
+		</parallel-foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="02491169-0155-4443-8903-b3572c7e9885" message="#[output application/json --- payload]"/>
+		<ee:transform doc:name="Set Output Payload" doc:id="b420e254-966d-436a-a30e-b9602f1f08c9">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="cache-flow" doc:id="15145b66-a570-48d7-bd11-a9927ac696dd" >
+		<http:listener doc:name="Listener" doc:id="11fdaa81-fc5d-41d1-8c37-7eedb70d5405" config-ref="HTTP_Listener_config" path="/testCache"/>
 	</flow>
 </mule>
